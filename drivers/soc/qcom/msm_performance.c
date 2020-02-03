@@ -26,6 +26,68 @@
  */
 #define POLL_INT 25
 #define NODE_NAME_MAX_CHARS 16
+static unsigned int use_input_evts_with_hi_slvt_detect;
+static struct mutex managed_cpus_lock;
+static int touchboost = 0;
+
+/* Maximum number to clusters that this module will manage*/
+static unsigned int num_clusters;
+struct cluster {
+	cpumask_var_t cpus;
+	/* Number of CPUs to maintain online */
+	int max_cpu_request;
+	/* To track CPUs that the module decides to offline */
+	cpumask_var_t offlined_cpus;
+	/* stats for load detection */
+	/* IO */
+	u64 last_io_check_ts;
+	unsigned int iowait_enter_cycle_cnt;
+	unsigned int iowait_exit_cycle_cnt;
+	spinlock_t iowait_lock;
+	unsigned int cur_io_busy;
+	bool io_change;
+	/* CPU */
+	unsigned int mode;
+	bool mode_change;
+	u64 last_mode_check_ts;
+	unsigned int single_enter_cycle_cnt;
+	unsigned int single_exit_cycle_cnt;
+	unsigned int multi_enter_cycle_cnt;
+	unsigned int multi_exit_cycle_cnt;
+	spinlock_t mode_lock;
+	/* Perf Cluster Peak Loads */
+	unsigned int perf_cl_peak;
+	u64 last_perf_cl_check_ts;
+	bool perf_cl_detect_state_change;
+	unsigned int perf_cl_peak_enter_cycle_cnt;
+	unsigned int perf_cl_peak_exit_cycle_cnt;
+	spinlock_t perf_cl_peak_lock;
+	/* Tunables */
+	unsigned int single_enter_load;
+	unsigned int pcpu_multi_enter_load;
+	unsigned int perf_cl_peak_enter_load;
+	unsigned int single_exit_load;
+	unsigned int pcpu_multi_exit_load;
+	unsigned int perf_cl_peak_exit_load;
+	unsigned int single_enter_cycles;
+	unsigned int single_exit_cycles;
+	unsigned int multi_enter_cycles;
+	unsigned int multi_exit_cycles;
+	unsigned int perf_cl_peak_enter_cycles;
+	unsigned int perf_cl_peak_exit_cycles;
+	unsigned int current_freq;
+	spinlock_t timer_lock;
+	unsigned int timer_rate;
+	struct timer_list mode_exit_timer;
+	struct timer_list perf_cl_peak_mode_exit_timer;
+};
+
+struct input_events {
+	unsigned int evt_x_cnt;
+	unsigned int evt_y_cnt;
+	unsigned int evt_pres_cnt;
+	unsigned int evt_dist_cnt;
+};
 
 enum cpu_clusters {
 	MIN = 0,
@@ -53,6 +115,275 @@ static unsigned int aggr_big_nr;
 static unsigned int aggr_top_load;
 static unsigned int top_load[CLUSTER_MAX];
 static unsigned int curr_cap[CLUSTER_MAX];
+#define LAST_UPDATE_TOL		USEC_PER_MSEC
+
+/* Bitmask to keep track of the workloads being detected */
+static unsigned int workload_detect;
+#define IO_DETECT	1
+#define MODE_DETECT	2
+#define PERF_CL_PEAK_DETECT	4
+
+
+/* IOwait related tunables */
+static unsigned int io_enter_cycles = 4;
+static unsigned int io_exit_cycles = 4;
+static u64 iowait_ceiling_pct = 25;
+static u64 iowait_floor_pct = 8;
+#define LAST_IO_CHECK_TOL	(3 * USEC_PER_MSEC)
+
+static unsigned int aggr_iobusy;
+static unsigned int aggr_mode;
+
+static struct task_struct *notify_thread;
+
+static struct input_handler *handler;
+
+/* CPU workload detection related */
+#define NO_MODE		(0)
+#define SINGLE		(1)
+#define MULTI		(2)
+#define MIXED		(3)
+#define PERF_CL_PEAK		(4)
+#define DEF_SINGLE_ENT		90
+#define DEF_PCPU_MULTI_ENT	85
+#define DEF_PERF_CL_PEAK_ENT	80
+#define DEF_SINGLE_EX		60
+#define DEF_PCPU_MULTI_EX	50
+#define DEF_PERF_CL_PEAK_EX		70
+#define DEF_SINGLE_ENTER_CYCLE	4
+#define DEF_SINGLE_EXIT_CYCLE	4
+#define DEF_MULTI_ENTER_CYCLE	4
+#define DEF_MULTI_EXIT_CYCLE	4
+#define DEF_PERF_CL_PEAK_ENTER_CYCLE	100
+#define DEF_PERF_CL_PEAK_EXIT_CYCLE	20
+#define LAST_LD_CHECK_TOL	(2 * USEC_PER_MSEC)
+#define CLUSTER_0_THRESHOLD_FREQ	147000
+#define CLUSTER_1_THRESHOLD_FREQ	190000
+#define INPUT_EVENT_CNT_THRESHOLD	15
+#define MAX_LENGTH_CPU_STRING	256
+
+
+
+/**************************sysfs start********************************/
+
+static int set_touchboost(const char *buf, const struct kernel_param *kp)
+ {
+ 	int val;
+
+ 	if (sscanf(buf, "%d\n", &val) != 1)
+ 		return -EINVAL;
+
+ 	touchboost = val;
+
+ 	return 0;
+ }
+
+ static int get_touchboost(char *buf, const struct kernel_param *kp)
+ {
+ 	return snprintf(buf, PAGE_SIZE, "%d", touchboost);
+ }
+
+ static const struct kernel_param_ops param_ops_touchboost = {
+ 	.set = set_touchboost,
+ 	.get = get_touchboost,
+ };
+ device_param_cb(touchboost, &param_ops_touchboost, NULL, 0644);
+
+static int set_num_clusters(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int val;
+
+	if (sscanf(buf, "%u\n", &val) != 1)
+		return -EINVAL;
+	if (num_clusters)
+		return -EINVAL;
+
+	num_clusters = val;
+
+	if (init_cluster_control()) {
+		num_clusters = 0;
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+static int get_num_clusters(char *buf, const struct kernel_param *kp)
+{
+	return snprintf(buf, PAGE_SIZE, "%u", num_clusters);
+}
+
+static const struct kernel_param_ops param_ops_num_clusters = {
+	.set = set_num_clusters,
+	.get = get_num_clusters,
+};
+device_param_cb(num_clusters, &param_ops_num_clusters, NULL, 0644);
+
+static int set_max_cpus(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int i, ntokens = 0;
+	const char *cp = buf;
+	int val;
+
+	if (!clusters_inited)
+		return -EINVAL;
+
+	while ((cp = strpbrk(cp + 1, ":")))
+		ntokens++;
+
+	if (ntokens != (num_clusters - 1))
+		return -EINVAL;
+
+	cp = buf;
+	for (i = 0; i < num_clusters; i++) {
+
+		if (sscanf(cp, "%d\n", &val) != 1)
+			return -EINVAL;
+		if (val > (int)cpumask_weight(managed_clusters[i]->cpus))
+			return -EINVAL;
+
+		managed_clusters[i]->max_cpu_request = val;
+
+		cp = strnchr(cp, strlen(cp), ':');
+		cp++;
+		trace_set_max_cpus(cpumask_bits(managed_clusters[i]->cpus)[0],
+								val);
+	}
+
+	schedule_delayed_work(&evaluate_hotplug_work, 0);
+
+	return 0;
+}
+
+static int get_max_cpus(char *buf, const struct kernel_param *kp)
+{
+	int i, cnt = 0;
+
+	if (!clusters_inited)
+		return cnt;
+
+	for (i = 0; i < num_clusters; i++)
+		cnt += snprintf(buf + cnt, PAGE_SIZE - cnt,
+				"%d:", managed_clusters[i]->max_cpu_request);
+	cnt--;
+	cnt += snprintf(buf + cnt, PAGE_SIZE - cnt, " ");
+	return cnt;
+}
+
+static const struct kernel_param_ops param_ops_max_cpus = {
+	.set = set_max_cpus,
+	.get = get_max_cpus,
+};
+
+#ifdef CONFIG_MSM_PERFORMANCE_HOTPLUG_ON
+device_param_cb(max_cpus, &param_ops_max_cpus, NULL, 0644);
+#endif
+
+static int set_managed_cpus(const char *buf, const struct kernel_param *kp)
+{
+	int i, ret;
+	struct cpumask tmp_mask;
+
+	if (!clusters_inited)
+		return -EINVAL;
+
+	ret = cpulist_parse(buf, &tmp_mask);
+
+	if (ret)
+		return ret;
+
+	for (i = 0; i < num_clusters; i++) {
+		if (cpumask_empty(managed_clusters[i]->cpus)) {
+			mutex_lock(&managed_cpus_lock);
+			cpumask_copy(managed_clusters[i]->cpus, &tmp_mask);
+			cpumask_clear(managed_clusters[i]->offlined_cpus);
+			mutex_unlock(&managed_cpus_lock);
+			break;
+		}
+	}
+
+	return ret;
+}
+
+static int get_managed_cpus(char *buf, const struct kernel_param *kp)
+{
+	int i, cnt = 0, total_cnt = 0;
+	char tmp[MAX_LENGTH_CPU_STRING] = "";
+
+	if (!clusters_inited)
+		return cnt;
+
+	for (i = 0; i < num_clusters; i++) {
+		cnt = cpumap_print_to_pagebuf(true, buf,
+						managed_clusters[i]->cpus);
+		if ((i + 1) < num_clusters &&
+		    (total_cnt + cnt + 1) <= MAX_LENGTH_CPU_STRING) {
+			snprintf(tmp + total_cnt, cnt, "%s", buf);
+			tmp[cnt-1] = ':';
+			tmp[cnt] = '\0';
+			total_cnt += cnt;
+		} else if ((i + 1) == num_clusters &&
+			   (total_cnt + cnt) <= MAX_LENGTH_CPU_STRING) {
+			snprintf(tmp + total_cnt, cnt, "%s", buf);
+			total_cnt += cnt;
+		} else {
+			pr_err("invalid string for managed_cpu:%s%s\n", tmp,
+				buf);
+			break;
+		}
+	}
+	snprintf(buf, PAGE_SIZE, "%s", tmp);
+	return total_cnt;
+}
+
+static const struct kernel_param_ops param_ops_managed_cpus = {
+	.set = set_managed_cpus,
+	.get = get_managed_cpus,
+};
+device_param_cb(managed_cpus, &param_ops_managed_cpus, NULL, 0644);
+
+/* Read-only node: To display all the online managed CPUs */
+static int get_managed_online_cpus(char *buf, const struct kernel_param *kp)
+{
+	int i, cnt = 0, total_cnt = 0;
+	char tmp[MAX_LENGTH_CPU_STRING] = "";
+	struct cpumask tmp_mask;
+	struct cluster *i_cl;
+
+	if (!clusters_inited)
+		return cnt;
+
+	for (i = 0; i < num_clusters; i++) {
+		i_cl = managed_clusters[i];
+
+		cpumask_clear(&tmp_mask);
+		cpumask_complement(&tmp_mask, i_cl->offlined_cpus);
+		cpumask_and(&tmp_mask, i_cl->cpus, &tmp_mask);
+
+		cnt = cpumap_print_to_pagebuf(true, buf, &tmp_mask);
+		if ((i + 1) < num_clusters &&
+		    (total_cnt + cnt + 1) <= MAX_LENGTH_CPU_STRING) {
+			snprintf(tmp + total_cnt, cnt, "%s", buf);
+			tmp[cnt-1] = ':';
+			tmp[cnt] = '\0';
+			total_cnt += cnt;
+		} else if ((i + 1) == num_clusters &&
+			   (total_cnt + cnt) <= MAX_LENGTH_CPU_STRING) {
+			snprintf(tmp + total_cnt, cnt, "%s", buf);
+			total_cnt += cnt;
+		} else {
+			pr_err("invalid string for managed_cpu:%s%s\n", tmp,
+				buf);
+			break;
+		}
+	}
+	snprintf(buf, PAGE_SIZE, "%s", tmp);
+	return total_cnt;
+}
+
+static const struct kernel_param_ops param_ops_managed_online_cpus = {
+	.get = get_managed_online_cpus,
+};
 
 /*******************************sysfs start************************************/
 static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
@@ -64,6 +395,11 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	struct cpu_status *i_cpu_stats;
 	struct cpufreq_policy policy;
 	cpumask_var_t limit_mask;
+	int ret;
+	const char *reset = "0:0 2:0";
+
+ 	if (touchboost == 0)
+ 		cp = reset;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
@@ -72,7 +408,11 @@ static int set_cpu_min_freq(const char *buf, const struct kernel_param *kp)
 	if (!(ntokens % 2))
 		return -EINVAL;
 
-	cp = buf;
+	if (touchboost == 0)
+ 		cp = reset;
+ 	else
+ 		cp = buf;
+
 	cpumask_clear(limit_mask);
 	for (i = 0; i < ntokens; i += 2) {
 		if (sscanf(cp, "%u:%u", &cpu, &val) != 2)
