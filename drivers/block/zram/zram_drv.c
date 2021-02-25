@@ -1840,7 +1840,7 @@ static ssize_t disksize_store(struct device *dev,
 	int err;
 
 #ifndef CONFIG_ZRAM_SIZE_OVERRIDE
-	disksize = memparse(buf, NULL);
+	disksize = (u64)2048 * SZ_1M;
 	if (!disksize)
 		return -EINVAL;
 #else
