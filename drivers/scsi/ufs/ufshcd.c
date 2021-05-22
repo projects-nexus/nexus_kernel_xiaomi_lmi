@@ -504,6 +504,11 @@ static int ufshcd_host_reset_and_restore(struct ufs_hba *hba);
 static void ufshcd_resume_clkscaling(struct ufs_hba *hba);
 static void ufshcd_suspend_clkscaling(struct ufs_hba *hba);
 static void __ufshcd_suspend_clkscaling(struct ufs_hba *hba);
+#if defined(CONFIG_UFSFEATURE)
+void ufshcd_hold_all(struct ufs_hba *hba);
+#else
+static void ufshcd_hold_all(struct ufs_hba *hba);
+#endif
 static void ufshcd_hba_vreg_set_lpm(struct ufs_hba *hba);
 static void ufshcd_hba_vreg_set_hpm(struct ufs_hba *hba);
 static int ufshcd_devfreq_target(struct device *dev,
@@ -3714,9 +3719,14 @@ static int ufshcd_comp_scsi_upiu(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 
 	if (likely(lrbp->cmd)) {
 #if defined(CONFIG_UFSFEATURE)
+#if defined(UFS3V1)
+		ufsf_change_read10_debug_lun(&hba->ufsf, lrbp);
+		ufsf_prep_fn(&hba->ufsf, lrbp);
+#elif defined(UFS3V0)
 		ufsf_hpb_change_lun(&hba->ufsf, lrbp);
 		ufsf_tw_prep_fn(&hba->ufsf, lrbp);
 		ufsf_hpb_prep_fn(&hba->ufsf, lrbp);
+#endif
 #endif
 		ret = ufshcd_prepare_req_desc_hdr(hba, lrbp,
 				&upiu_flags, lrbp->cmd->sc_data_direction);
@@ -4008,7 +4018,17 @@ send_orig_cmd:
 		ufshcd_vops_setup_xfer_req(hba, add_tag, (add_lrbp->cmd ? true : false));
 		ufshcd_send_command(hba, add_tag);
 		pre_req_err = -EBUSY;
+<<<<<<< HEAD
 		atomic64_inc(&hba->ufsf.ufshpb_lup[add_lrbp->lun]->pre_req_cnt);
+=======
+#if defined(CONFIG_UFSHPB)
+#if defined(UFS3V1)
+		atomic64_inc(&hba->ufsf.hpb_lup[add_lrbp->lun]->pre_req_cnt);
+#elif defined(UFS3V0)
+		atomic64_inc(&hba->ufsf.ufshpb_lup[add_lrbp->lun]->pre_req_cnt);
+#endif
+#endif
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 	}
 #endif
 	ufshcd_vops_setup_xfer_req(hba, tag, (lrbp->cmd ? true : false));
@@ -4037,6 +4057,7 @@ out:
 		clear_bit_unlock(add_tag, &hba->lrb_in_use);
 		ufshcd_release_all(hba);
 		ufshcd_vops_pm_qos_req_end(hba, pre_cmd->request, true);
+		ufshcd_complete_lrbp_crypto(hba, pre_cmd, add_lrbp);
 		ufsf_hpb_end_pre_req(&hba->ufsf, pre_cmd->request);
 	}
 #endif
@@ -6406,6 +6427,9 @@ static int ufshcd_slave_configure(struct scsi_device *sdev)
 	struct ufs_hba *hba = shost_priv(sdev->host);
 	struct request_queue *q = sdev->request_queue;
 #if defined(CONFIG_UFSFEATURE)
+#if defined(UFS3V1)
+	ufsf_slave_configure(&hba->ufsf, sdev);
+#elif defined(UFS3V0)
 	struct ufsf_feature *ufsf = &hba->ufsf;
 
 	if (ufsf_is_valid_lun(sdev->lun)) {
@@ -6414,6 +6438,7 @@ static int ufshcd_slave_configure(struct scsi_device *sdev)
 		printk(KERN_ERR "%s: ufsfeature set lun %d sdev %p q %p\n",
 		       __func__, (int)sdev->lun, sdev, sdev->request_queue);
 	}
+#endif
 #endif
 	blk_queue_update_dma_pad(q, PRDT_DATA_BYTE_COUNT_PAD - 1);
 	blk_queue_max_segment_size(q, PRDT_DATA_BYTE_COUNT_MAX);
@@ -6587,7 +6612,6 @@ ufshcd_transfer_rsp_status(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 							&hba->eeh_work))
 					pm_runtime_get_noresume(hba->dev);
 			}
-
 #if defined(CONFIG_UFSFEATURE)
 			if (scsi_status == SAM_STAT_GOOD)
 				ufsf_hpb_noti_rb(&hba->ufsf, lrbp);
@@ -7134,6 +7158,14 @@ out:
 
 static bool ufshcd_wb_sup(struct ufs_hba *hba)
 {
+#if defined(CONFIG_UFSTW)
+#if defined(UFS3V1)
+	if (is_samsung_ufs(hba))
+		return false;
+#elif defined(UFS3V0)
+	return false;
+#endif
+#endif
 	return ((hba->dev_info.d_ext_ufs_feature_sup &
 		   UFS_DEV_WRITE_BOOSTER_SUP) &&
 		  (hba->dev_info.b_wb_buffer_type
@@ -7319,7 +7351,7 @@ static void ufshcd_exception_event_handler(struct work_struct *work)
 	if (status & MASK_EE_URGENT_BKOPS)
 		ufshcd_bkops_exception_event_handler(hba);
 
-#if defined(CONFIG_UFSFEATURE)
+#if defined(CONFIG_UFSFEATURE) && defined(UFS3V0)
 	ufsf_tw_ee_handler(&hba->ufsf);
 #endif
 out:
@@ -8117,6 +8149,13 @@ out:
 		ufsf_hpb_reset_lu(&hba->ufsf);
 		ufsf_tw_reset_lu(&hba->ufsf);
 #endif
+#if defined(UFS3V1)
+		ufsf_reset_lu(&hba->ufsf);
+#elif defined(UFS3V0)
+		ufsf_hpb_reset_lu(&hba->ufsf);
+		ufsf_tw_reset_lu(&hba->ufsf);
+#endif
+#endif
 		err = SUCCESS;
 	} else {
 		dev_err(hba->dev, "%s: failed with err %d\n", __func__, err);
@@ -8337,7 +8376,9 @@ static int ufshcd_host_reset_and_restore(struct ufs_hba *hba)
 {
 	int err;
 	unsigned long flags;
-
+#if defined(CONFIG_UFSFEATURE) && defined(UFS3V1)
+	ufsf_reset_host(&hba->ufsf);
+#endif
 	/*
 	 * Stop the host controller and complete the requests
 	 * cleared by h/w
@@ -8346,7 +8387,11 @@ static int ufshcd_host_reset_and_restore(struct ufs_hba *hba)
 	ufshcd_hba_stop(hba, false);
 	hba->silence_err_logs = true;
 	ufshcd_complete_requests(hba);
+<<<<<<< HEAD
 #if defined(CONFIG_UFSFEATURE)
+=======
+#if defined(CONFIG_UFSFEATURE) && defined(UFS3V0)
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 	ufsf_hpb_reset_host(&hba->ufsf);
 	ufsf_tw_reset_host(&hba->ufsf);
 #endif
@@ -9419,9 +9464,19 @@ reinit:
 		scsi_scan_host(hba->host);
 #if defined(CONFIG_UFSFEATURE)
 		ufsf_device_check(hba);
+<<<<<<< HEAD
 		ufsf_hpb_init(&hba->ufsf);
 		ufsf_tw_init(&hba->ufsf);
 #endif
+=======
+#if defined(UFS3V1)
+		ufsf_init(&hba->ufsf);
+#elif defined(UFS3V0)
+		ufsf_hpb_init(&hba->ufsf);
+		ufsf_tw_init(&hba->ufsf);
+#endif
+#endif
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 		pm_runtime_put_sync(hba->dev);
 	}
 
@@ -9451,7 +9506,14 @@ out:
 		ufshcd_exit_clk_scaling(hba);
 		ufshcd_hba_exit(hba);
 	}
-
+#if defined(CONFIG_UFSFEATURE)
+#if defined(UFS3V1)
+	ufsf_reset(&hba->ufsf);
+#elif defined(UFS3V0)
+	ufsf_hpb_reset(&hba->ufsf);
+	ufsf_tw_reset(&hba->ufsf);
+#endif
+#endif
 	trace_ufshcd_init(dev_name(hba->dev), ret,
 		ktime_to_us(ktime_sub(ktime_get(), start)),
 		hba->curr_dev_pwr_mode, hba->uic_link_state);
@@ -10500,9 +10562,13 @@ static void ufshcd_vreg_set_lpm(struct ufs_hba *hba)
 			ufshcd_config_vreg_lpm(hba, hba->vreg_info.vccq2);
 	} else if (!ufshcd_is_ufs_dev_active(hba)) {
 		if (!hba->dev_info.keep_vcc_on)
+#if !defined(CONFIG_UFSTW)
 			ufshcd_toggle_vreg(hba->dev, hba->vreg_info.vcc, false);
+#endif
 		if (!ufshcd_is_link_active(hba)) {
+#if !defined(CONFIG_UFSTW)
 			ufshcd_config_vreg_lpm(hba, hba->vreg_info.vccq);
+#endif
 			ufshcd_config_vreg_lpm(hba, hba->vreg_info.vccq2);
 		}
 	}
@@ -10611,6 +10677,13 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		req_dev_pwr_mode = UFS_POWERDOWN_PWR_MODE;
 		req_link_state = UIC_LINK_OFF_STATE;
 	}
+
+#if defined(CONFIG_UFSFEATURE)
+	ufsf_hpb_suspend(&hba->ufsf);
+#if defined(UFS3V0)
+	ufsf_tw_suspend(&hba->ufsf);
+#endif
+#endif
 
 	ret = ufshcd_crypto_suspend(hba, pm_op);
 	if (ret)
@@ -10759,6 +10832,14 @@ enable_gating:
 	hba->hibern8_on_idle.is_suspended = false;
 	hba->clk_gating.is_suspended = false;
 	ufshcd_release_all(hba);
+#if defined(CONFIG_UFSFEATURE)
+#if defined(UFS3V1)
+	ufsf_resume(&hba->ufsf);
+#elif defined(UFS3V0)
+	ufsf_hpb_resume(&hba->ufsf);
+	ufsf_tw_resume(&hba->ufsf);
+#endif
+#endif
 	ufshcd_crypto_resume(hba, pm_op);
 #if defined(CONFIG_UFSFEATURE)
 	ufsf_hpb_resume(&hba->ufsf);
@@ -10889,9 +10970,19 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		ufshcd_resume_clkscaling(hba);
 
 #if defined(CONFIG_UFSFEATURE)
+<<<<<<< HEAD
 	ufsf_hpb_resume(&hba->ufsf);
 	ufsf_tw_resume(&hba->ufsf);
 #endif
+=======
+#if defined(UFS3V1)
+	ufsf_resume(&hba->ufsf);
+#elif defined(UFS3V0)
+	ufsf_hpb_resume(&hba->ufsf);
+	ufsf_tw_resume(&hba->ufsf);
+#endif
+#endif
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 
 	/* Set Auto-Hibernate timer if supported */
 	ufshcd_set_auto_hibern8_timer(hba);
@@ -11173,9 +11264,19 @@ EXPORT_SYMBOL(ufshcd_shutdown);
 void ufshcd_remove(struct ufs_hba *hba)
 {
 #if defined(CONFIG_UFSFEATURE)
+<<<<<<< HEAD
 	ufsf_hpb_release(&hba->ufsf);
 	ufsf_tw_release(&hba->ufsf);
 #endif
+=======
+#if defined(UFS3V1)
+	ufsf_remove(&hba->ufsf);
+#elif defined(UFS3V0)
+	ufsf_hpb_release(&hba->ufsf);
+	ufsf_tw_release(&hba->ufsf);
+#endif
+#endif
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 	ufs_sysfs_remove_nodes(hba->dev);
 	scsi_remove_host(hba->host);
 	/* disable interrupts */
@@ -11470,9 +11571,20 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	ufshcd_cmd_log_init(hba);
 
 #if defined(CONFIG_UFSFEATURE)
+<<<<<<< HEAD
 	ufsf_hpb_set_init_state(&hba->ufsf);
 	ufsf_tw_set_init_state(&hba->ufsf);
 #endif
+=======
+#if defined(UFS3V1)
+	ufsf_set_init_state(&hba->ufsf);
+#elif defined(UFS3V0)
+	ufsf_hpb_set_init_state(&hba->ufsf);
+	ufsf_tw_set_init_state(&hba->ufsf);
+#endif
+#endif
+
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 	async_schedule(ufshcd_async_scan, hba);
 
 	ufsdbg_add_debugfs(hba);

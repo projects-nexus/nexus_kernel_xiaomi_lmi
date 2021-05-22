@@ -172,8 +172,17 @@ enum unit_desc_param {
 	UNIT_DESC_HPB_LU_NUM_PIN_REGIONS		= 0x27,
 #endif
 #if defined(CONFIG_UFSTW)
+<<<<<<< HEAD
 	UNIT_DESC_TW_LU_MAX_BUF_SIZE			= 0x29,
 #endif
+=======
+#if defined(UFS3V1)
+	UNIT_DESC_TW_LU_WRITE_BUFFER_ALLOC_UNIT		= 0x29,
+#elif defined(UFS3V0)
+	UNIT_DESC_TW_LU_MAX_BUF_SIZE			= 0x29,
+#endif
+#endif
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 };
 
 /* Device descriptor parameters offsets in bytes*/
@@ -220,11 +229,37 @@ enum device_desc_param {
 	DEVICE_DESC_PARAM_WB_US_RED_EN		= 0x53,
 	DEVICE_DESC_PARAM_WB_TYPE		= 0x54,
 	DEVICE_DESC_PARAM_WB_SHARED_ALLOC_UNITS = 0x55,
+<<<<<<< HEAD
 #if defined(CONFIG_UFSTW)
 	DEVICE_DESC_PARAM_TW_RETURN_TO_USER	= 0x53,
 	DEVICE_DESC_PARAM_TW_BUF_TYPE		= 0x54,
 	DEVICE_DESC_PARAM_TW_VER		= 0x55,
 #endif
+=======
+	DEVICE_DESC_PARAM_FEAT_SUP		= 0x1F,
+#if defined(CONFIG_UFSHPB)
+	DEVICE_DESC_PARAM_HPB_VER		= 0x40,
+#if defined(UFS3V1)
+	DEVICE_DESC_PARAM_HPB_CONTROL		= 0x42,
+#endif
+#endif
+#if defined(CONFIG_UFSFEATURE)
+	DEVICE_DESC_PARAM_EX_FEAT_SUP		= 0x4F,
+#endif
+#if defined(CONFIG_UFSTW)
+#if defined(UFS3V1)
+	DEVICE_DESC_PARAM_TW_VER		= 0x4D,
+#endif
+	DEVICE_DESC_PARAM_TW_RETURN_TO_USER	= 0x53,
+	DEVICE_DESC_PARAM_TW_BUF_TYPE		= 0x54,
+#if defined(UFS3V1)
+	DEVICE_DESC_PARAM_TW_SHARED_BUF_ALLOC_UNITS	= 0x55,
+#endif
+#if defined(UFS3V0)
+	DEVICE_DESC_PARAM_TW_VER		= 0x55,
+#endif
+#endif
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 };
 
 /* Interconnect descriptor parameters offsets in bytes*/
@@ -281,13 +316,26 @@ enum geometry_desc_param {
 	GEOMETRY_DESC_HPB_DEVICE_MAX_ACTIVE_REGIONS	= 0x4B,
 #endif
 #if defined(CONFIG_UFSTW)
+<<<<<<< HEAD
+=======
+#if defined(UFS3V1)
+	GEOMETRY_DESC_TW_GROUP_NUM_CAP			= 0x4E,
+#endif
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 	GEOMETRY_DESC_TW_MAX_SIZE			= 0x4F,
 	GEOMETRY_DESC_TW_NUMBER_LU			= 0x53,
 	GEOMETRY_DESC_TW_CAP_ADJ_FAC			= 0x54,
 	GEOMETRY_DESC_TW_SUPPORT_USER_REDUCTION_TYPES	= 0x55,
 	GEOMETRY_DESC_TW_SUPPORT_BUF_TYPE		= 0x56,
+<<<<<<< HEAD
 	GEOMETRY_DESC_TW_GROUP_NUM_CAP			= 0x57,
 #endif
+=======
+#if defined(UFS3V0)
+	GEOMETRY_DESC_TW_GROUP_NUM_CAP			= 0x57,
+#endif
+#endif
+>>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 };
 
 /* Health descriptor parameters offsets in bytes*/
