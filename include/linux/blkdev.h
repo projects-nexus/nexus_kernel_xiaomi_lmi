@@ -676,19 +676,10 @@ struct request_queue {
 
 #define BLK_MAX_WRITE_HINTS	5
 	u64			write_hints[BLK_MAX_WRITE_HINTS];
-<<<<<<< HEAD
 
 #ifdef CONFIG_UFSTW
 	bool			turbo_write_dev;
 #endif
-=======
-	
-#ifdef CONFIG_UFSTW
-#if defined(UFS3V0)
-	bool			turbo_write_dev;
-#endif
-#endif
->>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 };
 
 #define QUEUE_FLAG_QUEUED	0	/* uses generic tag queueing */

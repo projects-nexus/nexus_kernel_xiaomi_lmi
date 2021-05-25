@@ -78,15 +78,7 @@
 #include "ufshci.h"
 
 #if defined(CONFIG_UFSFEATURE)
-<<<<<<< HEAD
 #include "ufsfeature.h"
-=======
-#if defined(UFS3V1)
-#include "ufs31/ufsfeature.h"
-#elif defined(UFS3V0)
-#include "ufs30/ufsfeature.h"
-#endif
->>>>>>> d62d46c0f2b64... scsi/ufs: Add Samsung TW/HPB drivers from oneplus sm8250
 #endif
 
 #define UFSHCD "ufshcd"
@@ -1132,10 +1124,6 @@ struct ufs_hba {
 	bool force_g4;
 	bool wb_enabled;
 
-#if defined(CONFIG_UFSFEATURE)
-	struct ufsf_feature ufsf;
-#endif
-
 #ifdef CONFIG_SCSI_UFS_CRYPTO
 	/* crypto */
 	union ufs_crypto_capabilities crypto_capabilities;
@@ -1418,15 +1406,7 @@ int ufshcd_query_flag(struct ufs_hba *hba, enum query_opcode opcode,
 	enum flag_idn idn, bool *flag_res);
 int ufshcd_read_string_desc(struct ufs_hba *hba, int desc_index,
 			    u8 *buf, u32 size, bool ascii);
-#if defined(CONFIG_UFSFEATURE)
-int ufshcd_exec_dev_cmd(struct ufs_hba *hba,
-			enum dev_cmd_type cmd_type, int timeout);
-int ufshcd_hibern8_hold(struct ufs_hba *hba, bool async);
-void ufshcd_hold_all(struct ufs_hba *hba);
-void ufshcd_release_all(struct ufs_hba *hba);
-int ufshcd_comp_scsi_upiu(struct ufs_hba *hba, struct ufshcd_lrb *lrbp);
-int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp);
-#endif
+
 int ufshcd_hold(struct ufs_hba *hba, bool async);
 void ufshcd_release(struct ufs_hba *hba, bool no_sched);
 int ufshcd_wait_for_doorbell_clr(struct ufs_hba *hba, u64 wait_timeout_us);
