@@ -11360,9 +11360,6 @@ static void smblib_chg_termination_work(struct work_struct *work)
 	    vote(chg->usb_icl_votable, CHG_TERMINATION_VOTER, false, 0);
 		vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER, false, 0);
 		goto out;
-		rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &stat);
-		if (rc < 0)
-			goto out;
 	}
 	if (chg->ext_fg) {
 		max_fv_uv = get_effective_result(chg->fv_votable);
