@@ -47,7 +47,7 @@ function finerr() {
 }
 # Compile plox
 function compile() {
-    make O=out ARCH=arm64 vendor/lmi_defconfig
+    make O=out ARCH=arm64 vendor/alioth_defconfig
     make -j$(nproc --all) O=out \
                           ARCH=arm64 \
 			  CC=clang \
