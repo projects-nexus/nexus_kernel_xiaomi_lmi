@@ -19,8 +19,6 @@
 #include <linux/kthread.h>
 #include <linux/sched/core_ctl.h>
 
-#include <linux/oem/control_center.h>
-
 static int touchboost = 1;
 
 /*
