@@ -64,7 +64,7 @@ function compile() {
 # Zipping
 function zipping() {
     cd AnyKernel || exit 1
-    zip -r9 neXus-V0.1-kernel-lmi-${TANGGAL}.zip *
+    zip -r9 neXus-V3-kernel-lmi-${TANGGAL}.zip *
     cd ..
 }
 sticker
