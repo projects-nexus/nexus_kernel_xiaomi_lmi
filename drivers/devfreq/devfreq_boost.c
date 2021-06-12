@@ -11,7 +11,6 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <uapi/linux/sched/types.h>
-#include <drm/drm_panel.h>
 
 enum {
 	SCREEN_OFF,
@@ -335,4 +334,4 @@ stop_kthreads:
 		kthread_stop(thread[i]);
 	return ret;
 }
-late_initcall(devfreq_boost_init);
+subsys_initcall(devfreq_boost_init);
