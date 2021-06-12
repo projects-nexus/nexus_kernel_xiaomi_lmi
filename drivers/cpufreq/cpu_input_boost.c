@@ -416,8 +416,8 @@ static int __init cpu_input_boost_init(void)
 
 	b->msm_drm_notif.notifier_call = msm_drm_notifier_cb;
 	b->msm_drm_notif.priority = INT_MAX;
-		ret = drm_panel_notifier_register(&b->msm_drm_notif);
-		if (ret) {
+	ret = drm_panel_notifier_register(&b->msm_drm_notif);
+	if (ret) {
 			pr_err("Unable to register fb_notifier: %d\n", ret);
 			goto unregister_handler;
 		}
