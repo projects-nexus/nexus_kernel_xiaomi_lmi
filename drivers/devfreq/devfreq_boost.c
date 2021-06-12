@@ -11,7 +11,6 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <uapi/linux/sched/types.h>
-#include <drm/drm_panel.h>
 
 enum {
 	SCREEN_OFF,
@@ -54,8 +53,6 @@ static struct df_boost_drv df_boost_drv_g __read_mostly = {
 		       CONFIG_DEVFREQ_MSM_LLCCBW_DDR_BOOST_FREQ),
 	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_MSM_CPU_LLCCBW,
 		       CONFIG_DEVFREQ_MSM_CPU_LLCCBW_BOOST_FREQ)
-	BOOST_DEV_INIT(df_boost_drv_g, DEVFREQ_MSM_CPUBW,
-		       CONFIG_DEVFREQ_MSM_CPUBW_BOOST_FREQ)
 };
 
 static void __devfreq_boost_kick(struct boost_dev *b)
@@ -295,8 +292,6 @@ static struct input_handler devfreq_boost_input_handler = {
 	.id_table	= devfreq_boost_ids
 };
 
-extern struct drm_panel *lcd_active_panel;
-
 static int __init devfreq_boost_init(void)
 {
 	struct df_boost_drv *d = &df_boost_drv_g;
@@ -306,9 +301,9 @@ static int __init devfreq_boost_init(void)
 	for (i = 0; i < DEVFREQ_MAX; i++) {
 		struct boost_dev *b = d->devices + i;
 
+		thread[i] = kthread_run_perf_critical(cpu_perf_mask,
+						      devfreq_boost_thread, b,
 						      "devfreq_boostd/%d", i);
-		thread[i] = kthread_run(devfreq_boost_thread, b,
-					"devfreq_boostd/%d", i);
 		if (IS_ERR(thread[i])) {
 			ret = PTR_ERR(thread[i]);
 			pr_err("Failed to create kthread, err: %d\n", ret);
@@ -329,14 +324,6 @@ static int __init devfreq_boost_init(void)
 	if (ret) {
 		pr_err("Failed to register fb notifier, err: %d\n", ret);
 		goto unregister_handler;
-	if (lcd_active_panel) {
-		ret = drm_panel_notifier_register(lcd_active_panel, &d->msm_drm_notif);
-		if (ret) {
-			pr_err("Unable to register fb_notifier: %d\n", ret);
-			goto unregister_handler;
-		}
-	} else {
-		pr_err("lcd_active_panel is null\n");
 	}
 
 	return 0;
