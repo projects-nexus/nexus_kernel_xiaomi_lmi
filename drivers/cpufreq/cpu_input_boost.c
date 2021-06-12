@@ -13,7 +13,6 @@
 #include <linux/msm_drm_notify.h>
 #include <linux/slab.h>
 #include <linux/version.h>
-#include <drm/drm_panel.h>
 
 /* The sched_param struct is located elsewhere in newer kernels */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
@@ -416,21 +415,10 @@ static int __init cpu_input_boost_init(void)
 
 	b->msm_drm_notif.notifier_call = msm_drm_notifier_cb;
 	b->msm_drm_notif.priority = INT_MAX;
-<<<<<<< HEAD
-	if (lcd_active_panel) {
-		ret = drm_panel_notifier_register(lcd_active_panel, &b->msm_drm_notif);
-		if (ret) {
-			pr_err("Unable to register fb_notifier: %d\n", ret);
-			goto unregister_handler;
-		}
-	} else {
-		pr_err("lcd_active_panel is null\n");
-=======
 	ret = drm_panel_notifier_register(&b->msm_drm_notif);
 	if (ret) {
         pr_err("Unable to register fb_notifier: %d\n", ret);
 	    goto unregister_handler;
->>>>>>> parent of cf1523bbb1089... cpu_input_boost: Fix screen notifier on msm-4.19
 	}
 
 	thread = kthread_run_perf_critical(cpu_prime_mask, cpu_boost_thread, b, "cpu_boostd");
@@ -450,4 +438,4 @@ unregister_cpu_notif:
 	cpufreq_unregister_notifier(&b->cpu_notif, CPUFREQ_POLICY_NOTIFIER);
 	return ret;
 }
-late_initcall(cpu_input_boost_init);
+subsys_initcall(cpu_input_boost_init);
