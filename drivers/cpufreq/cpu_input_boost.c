@@ -418,7 +418,6 @@ static int __init cpu_input_boost_init(void)
 
 	b->msm_drm_notif.notifier_call = msm_drm_notifier_cb;
 	b->msm_drm_notif.priority = INT_MAX;
-	ret = drm_panel_notifier_register(&b->msm_drm_notif);
 	if (lcd_active_panel) {
 		ret = drm_panel_notifier_register(lcd_active_panel, &b->msm_drm_notif);
 		if (ret) {
