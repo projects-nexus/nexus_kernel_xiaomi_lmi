@@ -32,8 +32,7 @@
 #include "xattr.h"
 #include "acl.h"
 #include "gc.h"
-#include "trace.h"
-#include <trace/events/f2fs.h>
+#include <notrace.h>
 
 static vm_fault_t f2fs_filemap_fault(struct vm_fault *vmf)
 {
