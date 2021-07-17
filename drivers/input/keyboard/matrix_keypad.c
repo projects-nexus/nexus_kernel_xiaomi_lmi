@@ -190,7 +190,7 @@ static irqreturn_t matrix_keypad_interrupt(int irq, void *id)
 
 	disable_row_irqs(keypad);
 	keypad->scan_pending = true;
-	schedule_delayed_work(&keypad->work,
+	queue_delayed_work(system_power_efficient_wq, &keypad->work,
 		msecs_to_jiffies(keypad->pdata->debounce_ms));
 
 out:
@@ -209,7 +209,7 @@ static int matrix_keypad_start(struct input_dev *dev)
 	 * Schedule an immediate key scan to capture current key state;
 	 * columns will be activated and IRQs be enabled after the scan.
 	 */
-	schedule_delayed_work(&keypad->work, 0);
+	queue_delayed_work(system_power_efficient_wq, &keypad->work, 0));
 
 	return 0;
 }

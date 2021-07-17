@@ -156,7 +156,7 @@ static void cr0014114_recount_work(struct work_struct *work)
 	if (ret)
 		dev_warn(priv->dev, "sync of LEDs failed %d\n", ret);
 
-	schedule_delayed_work(&priv->work, CR_RECOUNT_DELAY);
+	queue_delayed_work(system_power_efficient_wq, &priv->work, CR_RECOUNT_DELAY));
 }
 
 static int cr0014114_set_sync(struct led_classdev *ldev,
@@ -273,7 +273,7 @@ static int cr0014114_probe(struct spi_device *spi)
 		return ret;
 
 	/* setup recount work to workaround buggy firmware */
-	schedule_delayed_work(&priv->work, CR_RECOUNT_DELAY);
+	queue_delayed_work(system_power_efficient_wq, &priv->work, CR_RECOUNT_DELAY));
 
 	spi_set_drvdata(spi, priv);
 
