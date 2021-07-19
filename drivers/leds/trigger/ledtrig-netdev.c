@@ -87,7 +87,7 @@ static void set_baseline_state(struct led_netdev_data *trigger_data)
 		 */
 		if (test_bit(NETDEV_LED_TX, &trigger_data->mode) ||
 		    test_bit(NETDEV_LED_RX, &trigger_data->mode))
-			schedule_delayed_work(&trigger_data->work, 0);
+			queue_delayed_work(system_power_efficient_wq, &trigger_data->work, 0));
 	}
 }
 
@@ -195,7 +195,7 @@ static ssize_t netdev_led_attr_store(struct device *dev, const char *buf,
 		return -EINVAL;
 	}
 
-	cancel_delayed_work_sync(&trigger_data->work);
+	queue_delayed_work(system_power_efficient_wq, &trigger_data->work));
 
 	if (state)
 		set_bit(bit, &trigger_data->mode);

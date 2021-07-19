@@ -138,7 +138,7 @@ static void tca6416_keys_work_func(struct work_struct *work)
 		container_of(work, struct tca6416_keypad_chip, dwork.work);
 
 	tca6416_keys_scan(chip);
-	schedule_delayed_work(&chip->dwork, msecs_to_jiffies(100));
+	queue_delayed_work(system_power_efficient_wq, &chip->dwork, msecs_to_jiffies(100));
 }
 
 static int tca6416_keys_open(struct input_dev *dev)
@@ -149,7 +149,7 @@ static int tca6416_keys_open(struct input_dev *dev)
 	tca6416_keys_scan(chip);
 
 	if (chip->use_polling)
-		schedule_delayed_work(&chip->dwork, msecs_to_jiffies(100));
+		queue_delayed_work(system_power_efficient_wq, &chip->dwork, msecs_to_jiffies(100));
 	else
 		enable_irq(chip->irqnum);
 
