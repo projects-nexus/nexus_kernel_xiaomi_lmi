@@ -10,6 +10,6 @@ steps:
      chat_id:
        from_secret: chat_id
    commands:
-     - git clone --depth=1 https://github.com/NotZeetaa/nexus_kernel_lmi.git lmi
+     - git clone --depth=1 https://github.com/NotZeetaa/nexus_kernel_lmi.git -b efficient lmi
      - cd lmi
      - bash .circleci/build.sh
