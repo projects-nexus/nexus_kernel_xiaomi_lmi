@@ -83,3 +83,4 @@ obj-$(CONFIG_HALL_AKM09970)		+= akm09970.o
 obj-$(CONFIG_FPR_FPC)		+= fpr_FingerprintCard/
 obj-$(CONFIG_GPIO_TESTING_MODE)	+= gpio-testing-mode.o
 obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
+obj-$(CONFIG_BATTERY_SAVER)	+= battery_saver.o
