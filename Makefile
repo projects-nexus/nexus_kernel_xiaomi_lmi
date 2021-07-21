@@ -873,7 +873,7 @@ ifdef CONFIG_THINLTO
 lto-clang-flags	:= -flto=thin
 KBUILD_LDFLAGS	+= --thinlto-cache-dir=.thinlto-cache
 else
-lto-clang-flags	:= -flto
+lto-clang-flags	:= -flto=full
 endif
 lto-clang-flags += -fvisibility=default $(call cc-option, -fsplit-lto-unit)
 
