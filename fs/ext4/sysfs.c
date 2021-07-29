@@ -16,7 +16,6 @@
 
 #include "ext4.h"
 #include "ext4_jbd2.h"
-#include <notrace.h>
 
 typedef enum {
 	attr_noop,

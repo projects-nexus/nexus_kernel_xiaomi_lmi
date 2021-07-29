@@ -16,7 +16,7 @@
 
 #include "f2fs.h"
 #include "node.h"
-#include <notrace.h>
+#include <trace/events/f2fs.h>
 
 struct f2fs_compress_ops {
 	int (*init_compress_ctx)(struct compress_ctx *cc);

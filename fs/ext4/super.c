@@ -56,7 +56,7 @@
 #include "fsmap.h"
 
 #define CREATE_TRACE_POINTS
-#include <notrace.h>
+#include <trace/events/ext4.h>
 
 static struct ext4_lazy_init *ext4_li_info;
 static struct mutex ext4_li_mtx;
