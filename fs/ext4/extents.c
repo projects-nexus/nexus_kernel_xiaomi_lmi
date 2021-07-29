@@ -32,7 +32,7 @@
 #include "ext4_extents.h"
 #include "xattr.h"
 
-#include <notrace.h>
+#include <trace/events/ext4.h>
 
 /*
  * used by extent splitting.
