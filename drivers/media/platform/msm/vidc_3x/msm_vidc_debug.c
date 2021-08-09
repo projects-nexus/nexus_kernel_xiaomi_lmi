@@ -19,7 +19,7 @@
 #include "vidc_hfi_api.h"
 
 int msm_vidc_debug = 0;
-int msm_vidc_debug_out = VIDC_OUT_PRINTK;
+int msm_vidc_debug_out = 0;
 int msm_vidc_fw_debug = 0x18;
 int msm_vidc_fw_debug_mode = 1;
 int msm_vidc_fw_low_power_mode = 1;
@@ -33,6 +33,7 @@ bool msm_vidc_thermal_mitigation_disabled = true;
 bool msm_vidc_bitrate_clock_scaling = true;
 bool msm_vidc_debug_timeout = true;
 
+#if 0
 #define MAX_DBG_BUF_SIZE 4096
 
 #define DYNAMIC_BUF_OWNER(__binfo) ({ \
@@ -214,6 +215,8 @@ failed_create_dir:
 	return NULL;
 }
 
+#endif
+
 struct dentry *msm_vidc_debugfs_init_core(struct msm_vidc_core *core,
 		struct dentry *parent)
 {
@@ -247,6 +250,7 @@ failed_create_dir:
 	return dir;
 }
 
+#if 0
 static int inst_info_open(struct inode *inode, struct file *file)
 {
 	dprintk(VIDC_INFO, "Open inode ptr: %pK\n", inode->i_private);
@@ -419,6 +423,8 @@ static int inst_info_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+#endif
+
 static const struct file_operations inst_info_fops = {
 	.open = inst_info_open,
 	.read = inst_info_read,
@@ -475,6 +481,7 @@ exit:
 	return dir;
 }
 
+#if 0
 void msm_vidc_debugfs_deinit_inst(struct msm_vidc_inst *inst)
 {
 	struct dentry *dentry = NULL;
@@ -545,3 +552,5 @@ void msm_vidc_debugfs_update(struct msm_vidc_inst *inst,
 	}
 }
 
+
+#endif
