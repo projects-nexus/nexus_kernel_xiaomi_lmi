@@ -69,17 +69,6 @@ _kgsl_pool_add_page(struct kgsl_page_pool *pool, struct page *p)
 			    (1 << pool->pool_order));
 }
 
-static void
-_kgsl_pool_add_page_skipzeropages(struct kgsl_page_pool *pool, struct page *p)
-{
-	spin_lock(&pool->list_lock);
-	list_add_tail(&p->lru, &pool->page_list);
-	pool->page_count++;
-	spin_unlock(&pool->list_lock);
-	mod_node_page_state(page_pgdat(p), NR_KERNEL_MISC_RECLAIMABLE,
-				(1 << pool->pool_order));
-}
-
 /* Returns a page from specified pool */
 static struct page *
 _kgsl_pool_get_page(struct kgsl_page_pool *pool)
@@ -377,7 +366,7 @@ void kgsl_pool_free_page(struct page *page)
 			(kgsl_pool_size_total() < kgsl_pool_max_pages)) {
 		pool = _kgsl_get_pool_from_order(page_order);
 		if (pool && (atomic_read(&pool->page_count) < pool->max_pages)) {
-			_kgsl_pool_add_page_skipzeropages(pool, page);
+			_kgsl_pool_add_page(pool, page);
 			return;
 		}
 	}
