@@ -20,12 +20,6 @@ export CCACHE_DIR="$HOME/.ccache"
 export CC="ccache gcc"
 export CXX="ccache g++"
 export PATH="/usr/lib/ccache:$PATH"
-# sticker plox
-function sticker() {
-    curl -s -X POST "https://api.telegram.org/bot$token/sendSticker" \
-        -d sticker="CAADBQADmwEAAvQneFfl-dS0RNs7CQI" \
-        -d chat_id=$chat_id
-}
 # Send info plox channel
 function sendinfo() {
     curl -s -X POST "https://api.telegram.org/bot$token/sendMessage" \
