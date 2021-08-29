@@ -766,9 +766,13 @@ static ssize_t down_rate_limit_us_store(struct gov_attr_set *attr_set,
 static ssize_t iowait_boost_enable_show(struct gov_attr_set *attr_set,
 					char *buf)
 {
+	bool state = false;
 	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+	
+	if (!is_battery_saver_on())
+		state = tunables->iowait_boost_enable;
 
-	return sprintf(buf, "%u\n", tunables->iowait_boost_enable);
+	return sprintf(buf, "%u\n", state);
 }
 
 static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
