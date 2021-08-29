@@ -17,6 +17,7 @@
 #include <linux/sched/cpufreq.h>
 #include <trace/events/power.h>
 #include <linux/sched/sysctl.h>
+#include <linux/battery_saver.h>
 
 struct sugov_tunables {
 	struct gov_attr_set	attr_set;
@@ -424,6 +425,9 @@ static void sugov_iowait_boost(struct sugov_cpu *sg_cpu, u64 time,
 	bool set_iowait_boost = flags & SCHED_CPUFREQ_IOWAIT;
 
 	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
+	
+	if (is_battery_saver_on())
+        return;
 
 	if (!sg_policy->tunables->iowait_boost_enable)
 		return;
