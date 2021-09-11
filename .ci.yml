@@ -10,6 +10,4 @@ steps:
      chat_id:
        from_secret: chat_id
    commands:
-     - git clone --depth=1 https://github.com/nexus-projects/nexus_kernel_xiaomi_lmi.git -b beta-nw lmi
-     - cd lmi
      - bash .circleci/build.sh
