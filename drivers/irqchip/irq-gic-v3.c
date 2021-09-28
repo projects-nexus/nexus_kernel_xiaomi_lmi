@@ -35,6 +35,7 @@
 #include <linux/irqchip/arm-gic-common.h>
 #include <linux/irqchip/arm-gic-v3.h>
 #include <linux/irqchip/irq-partition-percpu.h>
+#include <linux/power_debug.h>
 #include <linux/wakeup_reason.h>
 #include <linux/syscore_ops.h>
 
@@ -456,6 +457,11 @@ static bool gic_check_wakeup_event(void *data)
 
 	return ret;
 }
+
+static struct wakeup_device gic_wakeup_device = {
+	.name = "gic-v3",
+	.check_wakeup_event = gic_check_wakeup_event,
+};
 
 static u64 gic_mpidr_to_affinity(unsigned long mpidr)
 {
@@ -1452,6 +1458,7 @@ static int __init gicv3_of_init(struct device_node *node, struct device_node *pa
 		goto out_unmap_rdist;
 
 	gic_populate_ppi_partitions(node);
+	pm_register_wakeup_device(&gic_wakeup_device);
 
 	if (static_branch_likely(&supports_deactivate_key))
 		gic_of_setup_kvm_info(node);
