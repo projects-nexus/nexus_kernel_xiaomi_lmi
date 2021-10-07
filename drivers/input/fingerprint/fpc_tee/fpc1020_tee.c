@@ -42,7 +42,6 @@
 #include <linux/pm_wakeup.h>
 #include <linux/fb.h>
 #include <linux/pinctrl/qcom-pinctrl.h>
-#include <drm/drm_bridge.h>
 #ifndef FPC_DRM_INTERFACE_WA
 #include <drm/drm_notifier_mi.h>
 #endif
@@ -760,26 +759,6 @@ static ssize_t irq_ack(struct device *dev,
 
 static DEVICE_ATTR(irq, S_IRUSR | S_IWUSR, irq_get, irq_ack);
 
-static ssize_t fingerdown_wait_set(struct device *dev,
-				   struct device_attribute *attr,
-				   const char *buf, size_t count)
-{
-	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
-
-	dev_info(fpc1020->dev, "%s -> %s\n", __func__, buf);
-	if (!strncmp(buf, "enable", strlen("enable")) && fpc1020->prepared)
-		fpc1020->wait_finger_down = true;
-	else if (!strncmp(buf, "disable", strlen("disable"))
-		 && fpc1020->prepared)
-		fpc1020->wait_finger_down = false;
-	else
-		return -EINVAL;
-
-	return count;
-}
-
-static DEVICE_ATTR(fingerdown_wait, S_IWUSR, NULL, fingerdown_wait_set);
-
 static ssize_t vendor_update(struct device *dev,
 			     struct device_attribute *attr,
 			     const char *buf, size_t count)
@@ -830,7 +809,6 @@ static struct attribute *attributes[] = {
 	&dev_attr_power_cfg.attr,
 	&dev_attr_irq.attr,
 	&dev_attr_vendor.attr,
-	&dev_attr_fingerdown_wait.attr,
 	NULL
 };
 
