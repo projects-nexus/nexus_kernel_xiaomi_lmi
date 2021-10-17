@@ -1116,7 +1116,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 
 #ifdef CONFIG_MACH_XIAOMI_LMI
 	if (framerate_override)
-		mode->h_front_porch = 16;
+		mode->h_front_porch = 32;
 #endif
 
 	rc = utils->read_u32(utils->data,
@@ -1130,7 +1130,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 
 #ifdef CONFIG_MACH_XIAOMI_LMI
 	if (framerate_override)
-		mode->h_back_porch = 8;
+		mode->h_back_porch = 16;
 #endif
 
 	rc = utils->read_u32(utils->data,
@@ -1144,7 +1144,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 
 #ifdef CONFIG_MACH_XIAOMI_LMI
 	if (framerate_override)
-		mode->h_sync_width = 8;
+		mode->h_sync_width = 16;
 #endif
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-h-sync-skew",
@@ -1175,7 +1175,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 
 #ifdef CONFIG_MACH_XIAOMI_LMI
 	if (framerate_override)
-		mode->h_sync_width = 8;
+		mode->v_back_porch = 16;
 #endif
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-v-front-porch",
@@ -1188,7 +1188,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 
 #ifdef CONFIG_MACH_XIAOMI_LMI
 	if (framerate_override)
-		mode->h_sync_width = 4;
+		mode->v_front_porch = 8;
 #endif
 
 	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-v-pulse-width",
@@ -1201,7 +1201,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 
 #ifdef CONFIG_MACH_XIAOMI_LMI
 	if (framerate_override)
-		mode->h_sync_width = 4;
+		mode->v_sync_width = 8;
 #endif
 
 	DSI_DEBUG("panel vert active:%d front_portch:%d back_porch:%d pulse_width:%d\n",
