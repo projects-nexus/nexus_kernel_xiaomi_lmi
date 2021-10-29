@@ -307,7 +307,7 @@ static inline int pm_qos_set_value_for_cpus(struct pm_qos_request *new_req,
 			}
 		}
 
-		if (!(new_req_cpus &= ~affected_cpus))
+		if (!(new_req_cpus &= ~affined_cpus))
 			return 0;
 	}
 
