@@ -77,6 +77,8 @@ static bool sched_boost_active;
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
+#define MIN_INPUT_INTERVAL (70 * USEC_PER_MSEC)
+
 static ssize_t store_input_boost_freq(struct kobject *kobj,
 				      struct kobj_attribute *attr,
 				      const char *buf, size_t count)
@@ -371,7 +373,7 @@ static void cpuboost_input_event(struct input_handle *handle,
 		return;
 
 	now = ktime_to_us(ktime_get());
-	if ((now - last_input_time) < (input_boost_ms * USEC_PER_MSEC))
+	if (now - last_input_time < MIN_INPUT_INTERVAL)
 		return;
 
 	if (work_pending(&input_boost_work))
@@ -392,7 +394,7 @@ void touch_irq_boost(void)
 		return;
 
 	now = ktime_to_us(ktime_get());
-	if ((now - last_input_time) < (input_boost_ms * USEC_PER_MSEC))
+	if (now - last_input_time < MIN_INPUT_INTERVAL)
 		return;
 
 	if (work_pending(&input_boost_work))
