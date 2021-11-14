@@ -214,14 +214,11 @@
 				39 01 00 00 00 00 02 53 E0];
 			mi,mdss-dsi-hbm-fod-on-command-state = "dsi_lp_mode";
 			mi,mdss-dsi-hbm-fod-off-command = [
-				15 00 00 00 00 00 02 53 20
-				39 01 00 00 00 00 03 51 03 FF];
+				15 01 00 00 10 00 02 53 20];
 			mi,mdss-dsi-hbm-fod-off-command-state = "dsi_hs_mode";
 
 			mi,mdss-dsi-hbm-off-command = [
-				15 00 00 00 00 00 02 53 28
-				/* parameter will be updated base on last brightness */
-				39 01 00 00 00 00 03 51 03 FF];
+				15 01 00 00 100 00 02 53 28];
 			mi,mdss-dsi-hbm-off-command-state = "dsi_lp_mode";
 			mi,mdss-dsi-hbm-on-command = [
 				15 01 00 00 00 00 02 53 E8
